@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/ParinLL/k8s-dnsconfig-webhook/internal/config"
-	"github.com/ParinLL/k8s-dnsconfig-webhook/server"
+	"github.com/ParinLL/k8s-dnsconfig-webhook/internal/server"
 )
 
 func main() {

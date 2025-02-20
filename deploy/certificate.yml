@@ -1,3 +1,38 @@
+# First create a root certificate issuer
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+# Create an intermediate CA Issuer
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: webhook-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: webhook-ca
+  secretName: webhook-ca
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Create the actual issuer for webhook certificates
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: webhook-issuer
+spec:
+  ca:
+    secretName: webhook-ca
+---
+# Update the webhook certificate to use the new issuer
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -9,5 +44,7 @@ spec:
     - dns-config-webhook.default.svc.cluster.local
   issuerRef:
     kind: ClusterIssuer
-    name: selfsigned-issuer
+    name: webhook-issuer
   secretName: webhook-certs
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days

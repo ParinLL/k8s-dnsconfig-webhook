@@ -1,0 +1,45 @@
+# Create ServiceAccount for the webhook
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dns-config-webhook
+  namespace: default
+---
+# Create ClusterRole for the webhook
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dns-config-webhook
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests"]
+  verbs: ["get", "list", "watch", "create"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests/status"]
+  verbs: ["update"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+# Create ClusterRoleBinding for the webhook
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dns-config-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dns-config-webhook
+subjects:
+- kind: ServiceAccount
+  name: dns-config-webhook
+  namespace: default

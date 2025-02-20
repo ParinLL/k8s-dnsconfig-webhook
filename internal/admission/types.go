@@ -16,12 +16,12 @@ type PatchOperation struct {
 }
 
 // AdmissionError creates an AdmissionResponse with an error
-func AdmissionError(err error) *admissionv1.AdmissionResponse {
+func AdmissionError(err error) (*admissionv1.AdmissionResponse, error) {
 	return &admissionv1.AdmissionResponse{
 		Result: &metav1.Status{
 			Message: err.Error(),
 		},
-	}
+	}, err
 }
 
 // AdmissionSuccess creates a successful AdmissionResponse with patches

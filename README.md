@@ -1,2 +1,8 @@
 # k8s-dnsconfig-webhook
-MutatingWebhookConfiguration for auto modify Pod dnsConfig
+Auto modify Pod dnsConfig with MutatingWebhookConfiguration
+
+
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t dokfish/k8s-dnsconfig-webhook:0.1 \
+  --push .
