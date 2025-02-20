@@ -2,10 +2,12 @@ package admission
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -51,12 +53,29 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get pod name or replicaset name for logging
+	podIdentifier := admissionReview.Request.Name
+	if podIdentifier == "" {
+		var pod corev1.Pod
+		if err := json.Unmarshal(admissionReview.Request.Object.Raw, &pod); err == nil {
+			for _, owner := range pod.OwnerReferences {
+				if owner.Kind == "ReplicaSet" {
+					podIdentifier = fmt.Sprintf("replicaset-%s", owner.Name)
+					break
+				}
+			}
+		}
+		if podIdentifier == "" {
+			podIdentifier = "<generating>"
+		}
+	}
+
 	// Log request details
 	klog.V(2).Infof("Admission request details:")
 	klog.V(2).Infof("  UID: %s", admissionReview.Request.UID)
 	klog.V(2).Infof("  Kind: %v", admissionReview.Request.Kind)
 	klog.V(2).Infof("  Resource: %v", admissionReview.Request.Resource)
-	klog.V(2).Infof("  Name: %s", admissionReview.Request.Name)
+	klog.V(2).Infof("  Name: %s", podIdentifier)
 	klog.V(2).Infof("  Namespace: %s", admissionReview.Request.Namespace)
 	klog.V(2).Infof("  Operation: %s", admissionReview.Request.Operation)
 	klog.V(2).Infof("  UserInfo: %v", admissionReview.Request.UserInfo)
@@ -79,16 +98,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if len(admissionResponse.Patch) > 0 {
 			klog.V(2).Infof("Mutation applied successfully for %s/%s",
 				admissionReview.Request.Namespace,
-				admissionReview.Request.Name)
+				podIdentifier)
 		} else {
 			klog.V(2).Infof("No mutation needed for %s/%s",
 				admissionReview.Request.Namespace,
-				admissionReview.Request.Name)
+				podIdentifier)
 		}
 	} else {
 		klog.V(2).Infof("Admission denied for %s/%s: %s",
 			admissionReview.Request.Namespace,
-			admissionReview.Request.Name,
+			podIdentifier,
 			admissionResponse.Result.Message)
 	}
 

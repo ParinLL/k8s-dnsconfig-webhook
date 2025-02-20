@@ -43,12 +43,24 @@ func (m *DNSConfigMutator) Mutate(ar *admissionv1.AdmissionRequest) (*admissionv
 	}
 
 	podNamespace := ar.Namespace
-	podName := pod.Name
-	if podName == "" {
-		podName = "<generating>"
+	podIdentifier := ""
+
+	// If pod name is not available, try to get ReplicaSet name
+	if pod.Name == "" {
+		for _, owner := range pod.OwnerReferences {
+			if owner.Kind == "ReplicaSet" {
+				podIdentifier = fmt.Sprintf("replicaset-%s", owner.Name)
+				break
+			}
+		}
+		if podIdentifier == "" {
+			podIdentifier = "<generating>"
+		}
+	} else {
+		podIdentifier = pod.Name
 	}
 
-	klog.V(2).Infof("Processing mutation for pod %s/%s", podNamespace, podName)
+	klog.V(2).Infof("Processing mutation for pod %s/%s", podNamespace, podIdentifier)
 
 	// Create patch operations
 	var patches []PatchOperation
@@ -56,9 +68,9 @@ func (m *DNSConfigMutator) Mutate(ar *admissionv1.AdmissionRequest) (*admissionv
 	// Log current DNS config
 	if pod.Spec.DNSConfig != nil {
 		currentConfig, _ := json.MarshalIndent(pod.Spec.DNSConfig, "", "  ")
-		klog.V(2).Infof("Current DNS config for pod %s/%s: %s", podNamespace, podName, string(currentConfig))
+		klog.V(2).Infof("Current DNS config for pod %s/%s: %s", podNamespace, podIdentifier, string(currentConfig))
 	} else {
-		klog.V(2).Infof("No existing DNS config for pod %s/%s", podNamespace, podName)
+		klog.V(2).Infof("No existing DNS config for pod %s/%s", podNamespace, podIdentifier)
 	}
 
 	// Determine if we need to add or replace the DNS config
@@ -68,20 +80,20 @@ func (m *DNSConfigMutator) Mutate(ar *admissionv1.AdmissionRequest) (*admissionv
 			Path:  "/spec/dnsConfig",
 			Value: m.config.DNSConfig,
 		})
-		klog.V(2).Infof("Adding new DNS config to pod %s/%s", podNamespace, podName)
+		klog.V(2).Infof("Adding new DNS config to pod %s/%s", podNamespace, podIdentifier)
 	} else {
 		patches = append(patches, PatchOperation{
 			Op:    "replace",
 			Path:  "/spec/dnsConfig",
 			Value: m.config.DNSConfig,
 		})
-		klog.V(2).Infof("Replacing DNS config for pod %s/%s", podNamespace, podName)
+		klog.V(2).Infof("Replacing DNS config for pod %s/%s", podNamespace, podIdentifier)
 	}
 
 	// Log the patches
 	if len(patches) > 0 {
 		patchesJSON, _ := json.MarshalIndent(patches, "", "  ")
-		klog.V(2).Infof("Applying patches to pod %s/%s: %s", podNamespace, podName, string(patchesJSON))
+		klog.V(2).Infof("Applying patches to pod %s/%s: %s", podNamespace, podIdentifier, string(patchesJSON))
 	}
 
 	return AdmissionSuccess(patches)
