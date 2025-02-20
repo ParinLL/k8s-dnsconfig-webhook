@@ -43,6 +43,25 @@ kubectl apply -f deploy/service.yaml
 
 # Configure the webhook
 kubectl apply -f deploy/MutatingWebhookConfiguration.yaml
+
+# Enable webhook for specific namespaces
+kubectl label namespace your-namespace webhook.dns-config=enabled
+```
+
+### Enabling the Webhook
+
+The webhook only processes pods in namespaces labeled with `webhook.dns-config=enabled`. To enable the webhook for a namespace:
+
+```bash
+# Enable for a specific namespace
+kubectl label namespace your-namespace webhook.dns-config=enabled
+
+# Enable for multiple namespaces
+kubectl label namespace namespace1 webhook.dns-config=enabled
+kubectl label namespace namespace2 webhook.dns-config=enabled
+
+# Disable for a namespace
+kubectl label namespace your-namespace webhook.dns-config-
 ```
 
 ## Configuration
@@ -114,7 +133,18 @@ kubectl get mutatingwebhookconfigurations
 kubectl get pods -l app=dns-config-webhook
 ```
 
-## Building from Source
+## Docker Image
+
+You can use the pre-built Docker image:
+```
+dokfish/k8s-dnsconfig-webhook:latest
+```
+
+This image is already configured in the deployment manifest and ready to use.
+
+## Building from Source (Optional)
+
+If you want to build the image yourself:
 
 1. Requirements:
    - Go 1.23.6 or higher
@@ -129,9 +159,11 @@ go build -o webhook ./cmd/webhook
 ```bash
 docker buildx build  --debug \
   --platform linux/amd64,linux/arm64 \
-  -t webhook-dns-config:0.1 \
+  -t your-registry/k8s-dnsconfig-webhook:tag \
   --push .
 ```
+
+Remember to update the image reference in `deploy/deployment.yaml` if you use your own image.
 
 ## License
 
