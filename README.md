@@ -16,6 +16,7 @@ A Kubernetes mutating admission webhook that automatically configures DNS settin
 - Kubernetes cluster (1.16+)
 - `kubectl` configured to communicate with your cluster
 - Cluster admin privileges to create MutatingWebhookConfiguration
+- cert-manager installed in your cluster (for managing webhook TLS certificates)
 
 ## Installation
 
